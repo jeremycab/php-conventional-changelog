@@ -56,7 +56,19 @@ class Repository
      */
     public static function getLastTag(): string
     {
-        return self::run('git describe --tags --exclude "*-*" --abbrev=0');
+        $result = self::run("git for-each-ref --sort=-v:refname --format='%(refname:strip=2)' refs/tags");
+        if (empty($result)) {
+            return '';
+        }
+
+        $tags = explode("\n", $result);
+        foreach ($tags as $tag) {
+            if (!str_contains($tag, '-')) {
+                return trim($tag);
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -85,8 +97,13 @@ class Repository
 
     private static function getTag(string $tag, string $match): ?string
     {
-        $find = self::run(sprintf('git describe --tags --match "*%s*-%s*" --abbrev=0', $tag, $match));
-
+        $find = self::run(
+            sprintf(
+                "git for-each-ref 'refs/tags/*%s*-%s*' --format=\"%%(refname:short)\" --sort=-v:refname --count=1",
+                $tag,
+                $match
+            )
+        );
         return !empty($find) ? $find : null;
     }
 
